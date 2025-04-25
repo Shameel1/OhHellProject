@@ -247,7 +247,11 @@ class OhHellEnv(Env):
         
         legal_actions = self._get_legal_actions() 
         extracted_state = {'obs': obs, 'legal_actions': legal_actions}
-        extracted_state['raw_legal_actions'] = [a for a in legal_actions]
+        extracted_state['raw_states'] = state
+        extracted_state['trump'] = trump_suit
+        extracted_state['raw_legal_actions'] = list(legal_actions.values())
+        extracted_state['players_tricks_won'] = players_tricks_won
+
         
         return extracted_state
 
@@ -368,9 +372,9 @@ class OhHellEnv(Env):
         '''
         legal_actions = self.game.get_legal_actions()
         if self.game.round.players_proposed == self.game.num_players:
-            legal_ids = {ACTION_SPACE[action.get_index()]: None for action in legal_actions}
+            legal_ids = {ACTION_SPACE[action.get_index()]: action.get_index() for action in legal_actions}
         else:
-            legal_ids = {ACTION_SPACE[str(action)]: None for action in legal_actions}
+            legal_ids = {ACTION_SPACE[str(action)]: str(action) for action in legal_actions}
         return OrderedDict(legal_ids)
 
     def get_payoffs(self):

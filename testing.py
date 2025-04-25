@@ -11,6 +11,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 
 # Add it to sys.path
 sys.path.append(current_dir)
+from rlohhell.games.ohhell.utils import ACTION_LIST
 
 register(
     env_id='ohhell',
@@ -29,12 +30,14 @@ agents.append(trainable_agent)
 env.set_agents(agents)
 
 obs, _ = env.reset()
-pp.pprint(obs)
-
-trajectories, payoffs = env.run()
-for i, episode in enumerate(trajectories[0]):
-    if i%2 == 0:
-        print(f"State {i}:")
-        pp.pprint(episode)
-    
+print('TRUMP:', obs['trump']) #
+trajectories, payoffs = env.run(is_training=True)
+# Iterate through the trajectories to print the whole game
+for step in range(len(trajectories[0]) // 2):  # Each step has states and actions
+    print(f"Step {step}:")
+    for player_id in range(env.num_players):
+        state = trajectories[player_id][step * 2]  # State at this step
+        action = trajectories[player_id][step * 2 + 1]  # Action at this step
+        print(f"\t Player {player_id}, Legal Moves: {state['raw_legal_actions']}, Action: {ACTION_LIST[action]}")
+    print("result:", state['players_tricks_won'])
 print(payoffs) # [0.0]
