@@ -3,32 +3,34 @@ import os
 import numpy as np
 import random
 from collections import OrderedDict
-from stable_baselines3 import PPO
+#from stable_baselines3 import PPO
 import math
 
 import rlohhell
+from rlcard.envs import Env
 from rlohhell.games.ohhell import Game
 from rlohhell.games.base import Card
 from rlohhell.games.ohhell.utils import ACTION_SPACE, ACTION_LIST, trumps_in_hand
 from rlohhell.utils.utils import rank2int
 
 
-import gym
-import gym.spaces
-from gym.utils import seeding
-
-class OhHellEnv2(gym.Env):
+class OhHellEnv(Env):
 
 
-    def __init__(self):
+    def __init__(self, config):
         self.game = Game()
+        self.name = 'ohhell'
         self.game.init_game()
-        self.seed()
+        
+        super().__init__(config)
+        
+        #self.seed()
         self.action_recorder = []
         self.timestep = 0
-
-        self.observation_space = gym.spaces.MultiBinary(362)
-        self.action_space = gym.spaces.Discrete(63)
+        self.state_shape = [[362] for _ in range(self.num_players)]
+        
+        #self.observation_space = gym.spaces.MultiBinary(362)
+        #self.action_space = gym.spaces.Discrete(63)
 
         
         with open(os.path.join(rlohhell.__path__[0], 'games/ohhell/card2index.json'), 'r') as file:
@@ -40,12 +42,12 @@ class OhHellEnv2(gym.Env):
         '''A previously trained model that predicts based of the obs returned by step
             Necessary so that the game can be play fictitiously
         '''
-        self.trained_model = PPO.load('ppo_ohhell')
+        #self.trained_model = PPO.load('ppo_ohhell')
 
     
-    def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
+    # def seed(self, seed=None):
+    #     self.np_random, seed = seeding.np_random(seed)
+    #     return [seed]
 
     
     def _extract_state(self, state):
@@ -242,28 +244,31 @@ class OhHellEnv2(gym.Env):
         # obs 350-361
         # Adding the num of times an invalid action was chosen
         obs[350 + wrong_actions_chosen] = 1  
-
         
-        return obs
+        legal_actions = self._get_legal_actions() 
+        extracted_state = {'obs': obs, 'legal_actions': legal_actions}
+        extracted_state['raw_legal_actions'] = [a for a in legal_actions]
+        
+        return extracted_state
 
     
-    def reset(self):
-        ''' Start a new game
+    # def reset(self):
+    #     ''' Start a new game
 
-        Returns:
-            (numpy.array): The begining state of the agent
-        '''
-        state, _ = self.game.init_game()
+    #     Returns:
+    #         (numpy.array): The begining state of the agent
+    #     '''
+    #     state, _ = self.game.init_game()
 
-        while self.game.players[self.game.current_player].name != 'Training':
-            current_obs = self._extract_state(self.game.get_state(self.game.current_player))
-            fictitious_action, _ = self.trained_model.predict(current_obs)
-            state, _ = self.game.step(self._decode_action(fictitious_action))
-            # a = random.choice(self.game.get_legal_actions())
-            # _,_ = self.game.step(a)
+    #     while self.game.players[self.game.current_player].name != 'Training':
+    #         current_obs = self._extract_state(self.game.get_state(self.game.current_player))
+    #         fictitious_action, _ = self.trained_model.predict(current_obs)
+    #         state, _ = self.game.step(self._decode_action(fictitious_action))
+    #         # a = random.choice(self.game.get_legal_actions())
+    #         # _,_ = self.game.step(a)
 
-        self.action_recorder = []
-        return self._extract_state(state)
+    #     self.action_recorder = []
+    #     return self._extract_state(state)
 
 
     def _decode_action(self, action_id):
@@ -298,56 +303,56 @@ class OhHellEnv2(gym.Env):
                 return int(ACTION_LIST[random.choice(list(legal_ids))])
 
     
-    def step(self, action, raw_action=False):
-        ''' Step forward
+    # def step(self, action, raw_action=False):
+    #     ''' Step forward
 
-        Args:
-            action (int): The action to be taken by the agent player
-            raw_action (boolean): True if the action is a raw action
+    #     Args:
+    #         action (int): The action to be taken by the agent player
+    #         raw_action (boolean): True if the action is a raw action
 
-        Returns:
-            obs (numpy.array): The next observation by the agent
-            reward (int): The reward from the last action
-            done (bool): If the game is done
-            info (dict): Extra info if needed
-        '''
+    #     Returns:
+    #         obs (numpy.array): The next observation by the agent
+    #         reward (int): The reward from the last action
+    #         done (bool): If the game is done
+    #         info (dict): Extra info if needed
+    #     '''
 
 
-        while self.game.players[self.game.current_player].name != 'Training':
-            current_obs = self._extract_state(self.game.get_state(self.game.current_player))
-            fictitious_action, _ = self.trained_model.predict(current_obs)
-            _, _ = self.game.step(self._decode_action(fictitious_action))
-            # a = random.choice(self.game.get_legal_actions())
-            # _,_ = self.game.step(a)
+    #     while self.game.players[self.game.current_player].name != 'Training':
+    #         current_obs = self._extract_state(self.game.get_state(self.game.current_player))
+    #         fictitious_action, _ = self.trained_model.predict(current_obs)
+    #         _, _ = self.game.step(self._decode_action(fictitious_action))
+    #         # a = random.choice(self.game.get_legal_actions())
+    #         # _,_ = self.game.step(a)
         
-        if not raw_action:
-            action = self._decode_action(action)
+    #     if not raw_action:
+    #         action = self._decode_action(action)
         
-        training_agent = self.game.current_player
-        current_tricks_won = self.game.players[training_agent].tricks_won
-        next_state, _ = self.game.step(action)
+    #     training_agent = self.game.current_player
+    #     current_tricks_won = self.game.players[training_agent].tricks_won
+    #     next_state, _ = self.game.step(action)
 
-        agent_action_was_available = self.was_action_available
+    #     agent_action_was_available = self.was_action_available
 
-        while self.game.players[self.game.current_player].name != 'Training' and not self.game.is_over():
-            current_obs = self._extract_state(self.game.get_state(self.game.current_player))
-            fictitious_action, _ = self.trained_model.predict(current_obs)
-            next_state, _ = self.game.step(self._decode_action(fictitious_action))
-            # a = random.choice(self.game.get_legal_actions())
-            # _,_ = self.game.step(a)
+    #     while self.game.players[self.game.current_player].name != 'Training' and not self.game.is_over():
+    #         current_obs = self._extract_state(self.game.get_state(self.game.current_player))
+    #         fictitious_action, _ = self.trained_model.predict(current_obs)
+    #         next_state, _ = self.game.step(self._decode_action(fictitious_action))
+    #         # a = random.choice(self.game.get_legal_actions())
+    #         # _,_ = self.game.step(a)
    
 
         
-        new_tricks_won = self.game.players[training_agent].tricks_won
+    #     new_tricks_won = self.game.players[training_agent].tricks_won
         
-        reward = new_tricks_won - current_tricks_won
-        if not agent_action_was_available:
-            reward = -1
-        done = self.game.is_over()
-        info = {}
-        obs = self._extract_state(next_state)
+    #     reward = new_tricks_won - current_tricks_won
+    #     if not agent_action_was_available:
+    #         reward = -1
+    #     done = self.game.is_over()
+    #     info = {}
+    #     obs = self._extract_state(next_state)
         
-        return obs, reward, done, info
+    #     return obs, reward, done, info
 
 
     def get_player_id(self):
@@ -368,8 +373,17 @@ class OhHellEnv2(gym.Env):
             legal_ids = {ACTION_SPACE[str(action)]: None for action in legal_actions}
         return OrderedDict(legal_ids)
 
+    def get_payoffs(self):
+        ''' Get the payoff of a game
+
+        Returns:
+           payoffs (list): list of payoffs
+        '''
+        payoffs = self.game.get_payoffs()
+        
+        return payoffs
 
 if __name__ == '__main__':
 
-    env = OhHellEnv2()
+    env = OhHellEnv()
     obs = env.reset()

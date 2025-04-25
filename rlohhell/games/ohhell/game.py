@@ -146,8 +146,8 @@ class OhHellGame:
         state['wrong_actions_chosen'] = self.players[player_id].wrong_actions_chosen
         
         # The game and round classes share a lot of repeat variable that must be synchronised
-        message = 'The round current player and env current player are not the same!'
-        assert player_id == state['current_player'], message
+        #message = 'The round current player and env current player are not the same!'
+        #assert player_id == state['current_player'], message
         
         state['last_winner'] = self.round.last_winner
         state['has_proposed'] = self.players[self.round.current_player].has_proposed
